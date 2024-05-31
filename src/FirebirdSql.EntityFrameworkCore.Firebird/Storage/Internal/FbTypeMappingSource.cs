@@ -38,9 +38,9 @@ public class FbTypeMappingSource : RelationalTypeMappingSource
 	readonly IntTypeMapping _integer = new IntTypeMapping("INTEGER", DbType.Int32);
 	readonly LongTypeMapping _bigint = new LongTypeMapping("BIGINT", DbType.Int64);
 
-	readonly FbStringTypeMapping _char = new FbStringTypeMapping("CHAR", DbType.StringFixedLength, FbDbType.Char);
-	readonly FbStringTypeMapping _varchar = new FbStringTypeMapping("VARCHAR", DbType.String, FbDbType.VarChar);
-	readonly FbStringTypeMapping _clob = new FbStringTypeMapping("BLOB SUB_TYPE TEXT", DbType.String, FbDbType.Text);
+	readonly FbStringTypeMapping _char = new FbStringTypeMapping("CHAR", DbType.StringFixedLength, FbDbType.Char, null, false);
+	readonly FbStringTypeMapping _varchar = new FbStringTypeMapping("VARCHAR", DbType.String, FbDbType.VarChar, null, false);
+	readonly FbStringTypeMapping _clob = new FbStringTypeMapping("BLOB SUB_TYPE TEXT", DbType.String, FbDbType.Text, null, false);
 
 	readonly FbByteArrayTypeMapping _binary = new FbByteArrayTypeMapping();
 
@@ -134,7 +134,7 @@ public class FbTypeMappingSource : RelationalTypeMappingSource
 		var clrType = mappingInfo.ClrType;
 		var storeTypeName = mappingInfo.StoreTypeName;
 		var storeTypeNameBase = mappingInfo.StoreTypeNameBase;
-		var isUnicode = IsUnicode(mappingInfo.IsUnicode);
+		var isUnicode = IsUnicode(mappingInfo.IsUnicode ?? false);
 
 		if (storeTypeName != null)
 		{
@@ -200,6 +200,6 @@ public class FbTypeMappingSource : RelationalTypeMappingSource
 	}
 
 	public static bool IsUnicode(RelationalTypeMapping mapping) => IsUnicode(mapping?.IsUnicode);
-	public static bool IsUnicode(RelationalTypeMappingInfo mappingInfo) => IsUnicode(mappingInfo.IsUnicode);
-	public static bool IsUnicode(bool? isUnicode) => isUnicode ?? true;
+	public static bool IsUnicode(RelationalTypeMappingInfo mappingInfo) => IsUnicode(mappingInfo.IsUnicode?? false);
+	public static bool IsUnicode(bool? isUnicode) => isUnicode ?? false;
 }

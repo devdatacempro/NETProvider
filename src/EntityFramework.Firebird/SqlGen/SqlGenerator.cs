@@ -543,11 +543,7 @@ internal sealed class SqlGenerator : DbExpressionVisitor<ISqlFragment>
 		switch (sqlPrimitiveType.ToUpperInvariant())
 		{
 			default:
-				result.Append("CAST(");
 				result.Append(e.Argument.Accept(this));
-				result.Append(" AS ");
-				result.Append(sqlPrimitiveType);
-				result.Append(")");
 				break;
 		}
 
@@ -602,11 +598,7 @@ internal sealed class SqlGenerator : DbExpressionVisitor<ISqlFragment>
 					break;
 
 				case PrimitiveTypeKind.Int16:
-					result.Append("CAST(");
 					result.Append(e.Value.ToString());
-					result.Append(" AS ");
-					result.Append(GetSqlPrimitiveType(e.ResultType));
-					result.Append(")");
 					break;
 
 				case PrimitiveTypeKind.Int32:
@@ -615,54 +607,19 @@ internal sealed class SqlGenerator : DbExpressionVisitor<ISqlFragment>
 					break;
 
 				case PrimitiveTypeKind.Int64:
-					result.Append("CAST(");
 					result.Append(e.Value.ToString());
-					result.Append(" AS ");
-					result.Append(GetSqlPrimitiveType(e.ResultType));
-					result.Append(")");
 					break;
 
 				case PrimitiveTypeKind.Double:
-					result.Append("CAST(");
-					result.Append(((Double)e.Value).ToString(CultureInfo.InvariantCulture));
-					result.Append(" AS ");
-					result.Append(GetSqlPrimitiveType(e.ResultType));
-					result.Append(")");
+					result.Append(e.Value.ToString());
 					break;
 
 				case PrimitiveTypeKind.Single:
-					result.Append("CAST(");
 					result.Append(((Single)e.Value).ToString(CultureInfo.InvariantCulture));
-					result.Append(" AS ");
-					result.Append(GetSqlPrimitiveType(e.ResultType));
-					result.Append(")");
 					break;
 
 				case PrimitiveTypeKind.Decimal:
-					var sqlPrimitiveType = GetSqlPrimitiveType(e.ResultType);
-					var strDecimal = ((Decimal)e.Value).ToString(CultureInfo.InvariantCulture);
-
-					var pointPosition = strDecimal.IndexOf('.');
-
-					var precision = 9;
-					// there's always the max value in manifest
-					if (MetadataHelpers.TryGetTypeFacetDescriptionByName(e.ResultType.EdmType, MetadataHelpers.PrecisionFacetName, out var precisionFacetDescription))
-					{
-						if (precisionFacetDescription.DefaultValue != null)
-							precision = (int)precisionFacetDescription.DefaultValue;
-					}
-
-					var maxScale = (pointPosition != -1 ? precision - pointPosition + 1 : 0);
-
-					result.Append("CAST(");
-					result.Append(strDecimal);
-					result.Append(" AS ");
-					result.Append(sqlPrimitiveType.Substring(0, sqlPrimitiveType.IndexOf('(')));
-					result.Append("(");
-					result.Append(precision.ToString(CultureInfo.InvariantCulture));
-					result.Append(",");
-					result.Append(maxScale.ToString(CultureInfo.InvariantCulture));
-					result.Append("))");
+					result.Append(((Decimal)e.Value).ToString(CultureInfo.InvariantCulture));
 					break;
 
 				case PrimitiveTypeKind.Binary:
@@ -670,12 +627,7 @@ internal sealed class SqlGenerator : DbExpressionVisitor<ISqlFragment>
 					break;
 
 				case PrimitiveTypeKind.String:
-					var isUnicode = MetadataHelpers.GetFacetValueOrDefault<bool>(e.ResultType, MetadataHelpers.UnicodeFacetName, true);
-					// constant is always considered Unicode
-					isUnicode = true;
-					var length = MetadataHelpers.GetFacetValueOrDefault<int?>(e.ResultType, MetadataHelpers.MaxLengthFacetName, null)
-						?? (isUnicode ? FbProviderManifest.UnicodeVarcharMaxSize : FbProviderManifest.AsciiVarcharMaxSize);
-					result.Append(FormatString((string)e.Value, isUnicode, length));
+					result.Append(FormatString((string)e.Value, false));
 					break;
 
 				case PrimitiveTypeKind.DateTime:
@@ -3153,7 +3105,7 @@ internal sealed class SqlGenerator : DbExpressionVisitor<ISqlFragment>
 
 	internal static string FormatBoolean(bool value)
 	{
-		return value ? "CAST(1 AS SMALLINT)" : "CAST(0 AS SMALLINT)";
+		return value ? "1" : "0";
 	}
 
 	internal static string FormatBinary(byte[] value)
@@ -3163,26 +3115,22 @@ internal sealed class SqlGenerator : DbExpressionVisitor<ISqlFragment>
 
 	internal static string FormatString(string value, bool isUnicode, int? explicitLength = null)
 	{
-		var result = new StringBuilder();
-		result.Append("CAST(");
-		if (isUnicode)
-		{
-			result.Append("_UTF8");
-		}
-		result.Append("'");
-		result.Append(value.Replace("'", "''"));
-		result.Append("' AS VARCHAR(");
-		result.Append(explicitLength ?? value.Length);
-		result.Append("))");
-		return result.ToString();
+		return string.Format("'{0}'", value.Replace("'", "''"));
 	}
 
 	internal static string FormatDateTime(DateTime value)
 	{
 		var result = new StringBuilder();
-		result.Append("CAST('");
-		result.Append(value.ToString("yyyy-MM-dd HH:mm:ss.ffff", CultureInfo.InvariantCulture));
-		result.Append("' AS TIMESTAMP)");
+		result.Append("'");
+		if (value.Hour == 0 && value.Minute == 0 && value.Second == 0)
+		{
+			result.Append(value.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture));
+		}
+		else
+		{
+			result.Append(value.ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture));
+		}
+		result.Append("'");
 		return result.ToString();
 	}
 
