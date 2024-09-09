@@ -41,11 +41,12 @@ public sealed class FbRestore : FbService
 
 	public FbBackupFileCollection BackupFiles { get; }
 	public bool Verbose { get; set; }
+	public int? VerboseInterval { get; set; }
 	public int? PageBuffers { get; set; }
 	public bool ReadOnly { get; set; }
 	public string SkipData { get; set; }
 	public FbRestoreFlags Options { get; set; }
-	public FbBackupRestoreStatistics Statistics { get; set; }
+	public FbBackupRestoreStatistics? Statistics { get; set; }
 
 	public FbRestore(string connectionString = null)
 		: base(connectionString)
@@ -71,6 +72,8 @@ public sealed class FbRestore : FbService
 				startSpb.Append2(IscCodes.isc_spb_dbname, ConnectionStringOptions.Database);
 				if (Verbose)
 					startSpb.Append(IscCodes.isc_spb_verbose);
+				if (VerboseInterval.HasValue)
+					startSpb.Append(IscCodes.isc_spb_verbint, (int)VerboseInterval);
 				if (PageBuffers.HasValue)
 					startSpb.Append(IscCodes.isc_spb_res_buffers, (int)PageBuffers);
 				if (_pageSize.HasValue)
@@ -79,11 +82,12 @@ public sealed class FbRestore : FbService
 				if (!string.IsNullOrEmpty(SkipData))
 					startSpb.Append2(IscCodes.isc_spb_res_skip_data, SkipData);
 				startSpb.Append(IscCodes.isc_spb_options, (int)Options);
-				startSpb.Append2(IscCodes.isc_spb_res_stat, Statistics.BuildConfiguration());
+				if (Statistics.HasValue)
+					startSpb.Append2(IscCodes.isc_spb_res_stat, Statistics.Value.BuildConfiguration());
 				if (ConnectionStringOptions.ParallelWorkers > 0)
 					startSpb.Append(IscCodes.isc_spb_res_parallel_workers, ConnectionStringOptions.ParallelWorkers);
 				StartTask(startSpb);
-				if (Verbose)
+				if (Verbose || VerboseInterval.HasValue)
 				{
 					ProcessServiceOutput(new ServiceParameterBuffer2(Service.ParameterBufferEncoding));
 				}
@@ -116,6 +120,8 @@ public sealed class FbRestore : FbService
 				startSpb.Append2(IscCodes.isc_spb_dbname, ConnectionStringOptions.Database);
 				if (Verbose)
 					startSpb.Append(IscCodes.isc_spb_verbose);
+				if (VerboseInterval.HasValue)
+					startSpb.Append(IscCodes.isc_spb_verbint, (int)VerboseInterval);
 				if (PageBuffers.HasValue)
 					startSpb.Append(IscCodes.isc_spb_res_buffers, (int)PageBuffers);
 				if (_pageSize.HasValue)
@@ -124,11 +130,12 @@ public sealed class FbRestore : FbService
 				if (!string.IsNullOrEmpty(SkipData))
 					startSpb.Append2(IscCodes.isc_spb_res_skip_data, SkipData);
 				startSpb.Append(IscCodes.isc_spb_options, (int)Options);
-				startSpb.Append2(IscCodes.isc_spb_res_stat, Statistics.BuildConfiguration());
+				if (Statistics.HasValue)
+					startSpb.Append2(IscCodes.isc_spb_res_stat, Statistics.Value.BuildConfiguration());
 				if (ConnectionStringOptions.ParallelWorkers > 0)
 					startSpb.Append(IscCodes.isc_spb_res_parallel_workers, ConnectionStringOptions.ParallelWorkers);
 				await StartTaskAsync(startSpb, cancellationToken).ConfigureAwait(false);
-				if (Verbose)
+				if (Verbose || VerboseInterval.HasValue)
 				{
 					await ProcessServiceOutputAsync(new ServiceParameterBuffer2(Service.ParameterBufferEncoding), cancellationToken).ConfigureAwait(false);
 				}
